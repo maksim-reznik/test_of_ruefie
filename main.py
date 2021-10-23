@@ -1,197 +1,316 @@
 from kivy.app import App
-from kivy.core.window import Window
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
 from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
+from kivy.core.window import Window
 from kivy.uix.scrollview import ScrollView
-from instruction import txt_instruction
-from instruction import txt_test1
-from instruction import txt_test3
-from instruction import txt_sits
-from rufie import *
-from sekonds import *
+from kivy.base import stopTouchApp
+from kivy.uix.popup import Popup
 
-age = 7
+from instruction import txt_instruction, txt_test1, txt_test2, txt_test3, txt_sits
+from scrollLabel import ScrollLabel
+from rufie import test
+from coloredLayout import ColoredLayout
+
+from seconds import Seconds
+from sits import Sits
+
+# from runner import Runner
+
+Window.clearcolor = (0.5, 8.1, 1.7, 1.55555554564654)
+btn_color = (0.55, 0.78, 0.33, 11)
+
+age = ''
 name = ""
 p1, p2, p3 = 0, 0, 0
 
 
-def check_int(x):
+def check_int(str_num):
     try:
-        x = int(x)
+        return int(str_num)
     except:
         return False
-    return age
 
 
-# class SuperButton(Button):
-#     def __init__(self, screen, direction='right', goal='main', **kwargs):
-#         super().__init__(**kwargs)
-#         self.txt = Label()
-#         self.screen = screen
-#         self.goal = goal
-#         self.direction = direction
-#
-#     def change_text(self, text):
-#         self.txt.text = text
-#
-#     def on_press(self):
-#         self.screen.manager.transition.direction = self.direction
-#         self.screen.manager.current = self.goal
+def get_result():
+    res = test(p1, p2, p3, age)
+    return name + '\n' + res[0] + '\n' + res[1]
 
 
 class InstrScr(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        instr = Label(text=txt_instruction)
-        name = Label(text="Введите ваше имя")
+
+        instr = ScrollLabel(txt_instruction, textcolor='#FFFFFF')
+
+        lbl1 = Label(text='Введите имя:', halign='right')
         self.in_name = TextInput(multiline=False)
-        age = Label(text="Введите ваш возраст", halign="right")
-        self.in_age = TextInput(text="", multiline=False)
+        lbl2 = Label(text='Введите возраст:', halign='right')
+        self.in_age = TextInput(text='', multiline=False)
 
-        self.btn = Button(text="Начать", size_hint=(0.3, 0.2), pos_hint={"center_x": 0.5})
-        box1 = BoxLayout(size_hint=(0.8, None), height="30sp")
-        box2 = BoxLayout(size_hint=(0.8, None), height="30sp")
-        box1.add_widget(name)
-        box1.add_widget(self.in_name)
-        box2.add_widget(age)
-        box2.add_widget(self.in_age)
-
-        outer = BoxLayout(orientation="vertical", padding=8, spacing=8)
-        outer.add_widget(instr)
-        outer.add_widget(box1)
-        outer.add_widget(box2)
-        outer.add_widget(self.btn)
-        self.add_widget(outer)
+        self.btn = Button(text='Начать', size_hint=(0.3, 0.2), pos_hint={'center_x': 0.5})
+        self.btn.background_color = btn_color
         self.btn.on_press = self.next
 
+        line1 = BoxLayout(size_hint=(0.8, None), height='30sp')
+        line2 = BoxLayout(size_hint=(0.8, None), height='30sp')
+        line1.add_widget(lbl1)
+        line1.add_widget(self.in_name)
+        line2.add_widget(lbl2)
+        line2.add_widget(self.in_age)
+
+        outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+        outer.add_widget(instr)
+        outer.add_widget(line1)
+        outer.add_widget(line2)
+        outer.add_widget(self.btn)
+
+        self.add_widget(outer)
+
     def next(self):
-        global name, age
-        age = check_int(self.in_age.text)
+        global age, name
         name = self.in_name.text
-        if age < 7 or age == False:
-            age = 7
+        age = check_int(self.in_age.text)
+        if age == False or age < 7:
             self.in_age.text = str(age)
+            popup = Popup(title='Ошибка', content=Label(text='Возраст должен быть от 7 лет'), size_hint=(None, None),
+                          size=(600, 600), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+            popup.open()
         else:
+            self.in_name.text = ''
+            self.in_age.text = '7'
             self.manager.current = 'pulse1'
 
 
-class PulseScr1(Screen):
-    def __init__(self, name="PulseScr1", **kwargs):
+class PulseScr(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.next_screen = False
-        super().__init__(name=name, **kwargs)
-        instr = Label(text=txt_test1)
-        result1 = Label(text="Введите результат:")
-        self.in_result = TextInput(multiline=False)
-        self.in_result.set_disabled(True)
-        self.lbl_seconds = Seconds(15)
-        self.lbl_seconds.bind(done=self.finished)
 
-        self.btn = Button(text="Запустить таймер", size_hint=(0.3, 0.2), pos_hint={"center_x": 0.5})
+        instr = ScrollLabel(txt_test1, textcolor='#6546')
+        lbl1 = ScrollLabel('Считайте пульс', textcolor='#654')
+        self.lbl_sec = Seconds(15, textcolor='#174654')
+        self.lbl_sec.bind(done=self.sec_finished)
+
+        line1 = ColoredLayout(lcolor=(0, 0.5, 0.01, 1))
+        vlay = ColoredLayout(orientation='vertical', lcolor=(0.44, 0.44, 0.44, 1))
+        vlay.add_widget(lbl1)
+        vlay.add_widget(self.lbl_sec)
+        line1.add_widget(instr)
+        line1.add_widget(vlay)
+
+        line2 = BoxLayout(size_hint=(0.8, None), height='30sp')
+        lbl_result = Label(text='Введите результат:', halign='right')
+        self.in_result = TextInput(text='0', multiline=False)
+        self.in_result.set_disabled(True)
+
+        line2.add_widget(lbl_result)
+        line2.add_widget(self.in_result)
+
+        self.btn = Button(text='Начать', pos_hint={'center_x': 0.5})
+        self.btn.background_color = btn_color
         self.btn.on_press = self.next
-        box1 = BoxLayout(size_hint=(0.8, None), height="30sp")
-        box1.add_widget(result1)
-        box1.add_widget(self.in_result)
-        outer = BoxLayout(orientation="vertical", padding=8, spacing=8)
-        outer.add_widget(instr)
-        outer.add_widget(box1)
-        outer.add_widget(self.lbl_seconds)
-        outer.add_widget(self.btn)
+        self.line3 = BoxLayout(size_hint=(0.8, None), height='80sp', pos_hint={'center_x': 0.5})
+        self.line3.add_widget(self.btn)
+
+        outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+        outer.add_widget(line1)
+        outer.add_widget(line2)
+        outer.add_widget(self.line3)
+
         self.add_widget(outer)
 
-    def finished(self, *args):
-        self.next_screen = True
+    def sec_finished(self, *args):
         self.in_result.set_disabled(False)
         self.btn.set_disabled(False)
         self.btn.text = 'Продолжить'
+        self.next_screen = True
+
+        self.line3.remove_widget(self.btn)
+        self.btn_back = Button(text='Назад')
+        self.btn_back.background_color = btn_color
+        self.line3.add_widget(self.btn_back)
+        self.line3.add_widget(self.btn)
+        self.btn_back.on_press = self.back
 
     def next(self):
         if not self.next_screen:
             self.btn.set_disabled(True)
-            self.lbl_seconds.start()
+            self.lbl_sec.start()
         else:
             global p1
-            p1 = check_int(self.in_result)
-            if p1 == False:
+            p1 = check_int(self.in_result.text)
+            if p1 == False or p1 <= 0:
                 p1 = 0
                 self.in_result.text = str(p1)
             else:
+                self.in_result.text = '0'
                 self.manager.current = 'sits'
 
+    def back(self):
+        self.manager.current = self.manager.previous()
 
-class PulseScr2(Screen):
-    def __init__(self, name="PulseScr2", **kwargs):
-        super().__init__(name=name, **kwargs)
-        instr = Label(text=txt_sits)
 
-        self.btn = Button(text="Продолжить", size_hint=(0.3, 0.2), pos_hint={"center_x": 0.5})
+class CheckSits(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.next_screen = False
+
+        instr = ScrollLabel(txt_sits, size_hint=(0.3, 1), textcolor='#753')
+        lbl1 = ScrollLabel('Сделайте 30 приседаний', textcolor='#147')
+        self.lbl_sits = Sits(30, textcolor='#654')
+
+        line = ColoredLayout(lcolor=(0, 0.5, 0.01, 1))
+        vlay = BoxLayout(orientation='vertical', size_hint=(0.3, 1))
+        vlay.add_widget(lbl1)
+        vlay.add_widget(self.lbl_sits)
+        line.add_widget(instr)
+        line.add_widget(vlay)
+
+        self.btn = Button(text='Начать', size_hint=(0.3, 0.2), pos_hint={'center_x': 0.5})
+        self.btn.background_color = btn_color
         self.btn.on_press = self.next
-        outer = BoxLayout(orientation="vertical", padding=8, spacing=8)
-        outer.add_widget(instr)
+
+        outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+        outer.add_widget(line)
         outer.add_widget(self.btn)
+
         self.add_widget(outer)
+
+    def run_finished(self, instance, value):
+        self.btn.set_disabled(False)
+        self.btn.text = 'Продолжить'
+        self.next_screen = True
 
     def next(self):
         self.manager.current = 'pulse2'
 
 
-#
-#
-# class PulseScr3(Screen):
-#     def __init__(self, name="PulseScr3", **kwargs):
-#         super().__init__(name=name, **kwargs)
-#         instr = Label(text=txt_test3)
-#         result1 = Label(text="Результат:")
-#         self.in_result1 = TextInput(multiline=False)
-#         result2 = Label(text="Результат после отдыха:", halign="right")
-#         self.in_result2 = TextInput(text="", multiline=False)
-#         self.btn = Button(self, text="Завершить", size_hint=(0.3, 0.2), pos_hint={"center_x": 0.5}, goal="Result",
-#                           direction="left", background_color="green")
-#         box1 = BoxLayout(size_hint=(0.8, None), height="30sp")
-#         box2 = BoxLayout(size_hint=(0.8, None), height="30sp")
-#         box1.add_widget(result1)
-#         box1.add_widget(self.in_result1)
-#         box2.add_widget(result2)
-#         box2.add_widget(self.in_result2)
-#
-#         outer = BoxLayout(orientation="vertical", padding=8, spacing=8)
-#         outer.add_widget(instr)
-#         outer.add_widget(box1)
-#         outer.add_widget(box2)
-#         outer.add_widget(self.btn)
-#         self.add_widget(outer)
-#
-#     def next(self):
-#         global p2, p3
-#         p2 = int(self.in_result1.text)
-#         p3 = int(self.in_result2.text)
-#
-#
-# class Result(Screen):
-#     def __init__(self, name="Result", **kwargs):
-#         super().__init__(name=name, **kwargs)
-#         self.instruction = Label(text="")
-#         self.outer = BoxLayout(orientation="vertical", padding=8, spacing=8)
-#         self.outer.add_widget(self.instruction)
-#         self.add_widget(self.outer)
-#         self.on_enter = self.before
-#
-#     def before(self):
-#         self.instruction.text = name + "\n" + test(p1, p2, p3, age)
+class PulseScr2(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.next_screen = False
+
+        self.stage = 0
+        instr = ScrollLabel(txt_test3, textcolor='#789')
+
+        self.lbl1 = ScrollLabel('Считайте пульс', textcolor='#852')
+        self.lbl_sec = Seconds(15, textcolor='#963')
+        self.lbl_sec.bind(done=self.sec_finished)
+
+        line0 = ColoredLayout(lcolor=(0, 0.5, 0.01, 1))
+        vlay = ColoredLayout(orientation='vertical', lcolor=(0.44, 0.44, 0.44, 1))
+        vlay.add_widget(self.lbl1)
+        vlay.add_widget(self.lbl_sec)
+        line0.add_widget(instr)
+        line0.add_widget(vlay)
+
+        line1 = BoxLayout(size_hint=(0.8, None), height='30sp')
+        lbl_result1 = Label(text='Результат:', halign='right')
+        self.in_result1 = TextInput(text='0', multiline=False)
+        self.in_result1.set_disabled(True)
+
+        line1.add_widget(lbl_result1)
+        line1.add_widget(self.in_result1)
+
+        line2 = BoxLayout(size_hint=(0.8, None), height='30sp')
+        lbl_result2 = Label(text='Результат после отдыха:', halign='right')
+        self.in_result2 = TextInput(text='0', multiline=False)
+        self.in_result2.set_disabled(True)
+
+        line2.add_widget(lbl_result2)
+        line2.add_widget(self.in_result2)
+
+        self.btn = Button(text='Начать', size_hint=(0.3, 0.2), pos_hint={'center_x': 0.5})
+        self.btn.background_color = btn_color
+        self.btn.on_press = self.next
+
+        outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+        outer.add_widget(line0)
+        outer.add_widget(line1)
+        outer.add_widget(line2)
+        outer.add_widget(self.btn)
+
+        self.add_widget(outer)
+
+    def sec_finished(self, instance, value):
+        if value:
+            if self.stage == 0:
+                self.stage = 1
+                self.lbl1.set_text('Отдыхайте')
+                self.lbl_sec.restart(30)
+                self.in_result1.set_disabled(False)
+            elif self.stage == 1:
+                self.stage = 2
+                self.lbl1.set_text('Считайте пульс')
+                self.lbl_sec.restart(15)
+            elif self.stage == 2:
+                self.in_result2.set_disabled(False)
+                self.btn.set_disabled(False)
+                self.btn.text = 'Завершить'
+                self.next_screen = True
+
+    def next(self):
+        if not self.next_screen:
+            self.btn.set_disabled(True)
+            self.lbl_sec.start()
+        else:
+            global p2, p3
+            p2 = check_int(self.in_result1.text)
+            p3 = check_int(self.in_result2.text)
+            if p2 == False and p3 == False:
+                p2 = 0
+                self.in_result1.text = str(p2)
+                p3 = 0
+                self.in_result2.text = str(p3)
+            elif p2 == False:
+                p2 = 0
+                self.in_result1.text = str(p2)
+            elif p3 == False:
+                p3 = 0
+                self.in_result2.text = str(p3)
+            else:
+                self.in_result1.text = '0'
+                self.in_result2.text = '0'
+                self.manager.current = 'result'
 
 
-class test_of_rufie(App):
+class Result(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.outer = BoxLayout(orientation='vertical', padding=8, spacing=8)
+        self.instr = ScrollLabel('', textcolor='#951')
+
+        self.btn = Button(text='Завершить', size_hint=(0.3, 0.2), pos_hint={'center_x': 0.5})
+        self.btn.background_color = btn_color
+        self.btn.on_press = self.next
+
+        self.outer.add_widget(self.instr)
+        self.outer.add_widget(self.btn)
+
+        self.add_widget(self.outer)
+        self.on_enter = self.before
+
+    def before(self):
+        self.instr.set_text(get_result())
+
+    def next(self):
+        stopTouchApp()
+
+
+class HeartCheck(App):
     def build(self):
         sm = ScreenManager()
-        sm.add_widget(InstrScr(name='init'))
-        sm.add_widget(PulseScr1(name='pulse1'))
-        sm.add_widget(PulseScr2(name='sits'))
-        # sm.add_widget(PulseScr3(name='pulse2'))
-        # sm.add_widget(Result(name='result'))
+        sm.add_widget(InstrScr(name='instr'))
+        sm.add_widget(PulseScr(name='pulse1'))
+        sm.add_widget(CheckSits(name='sits'))
+        sm.add_widget(PulseScr2(name='pulse2'))
+        sm.add_widget(Result(name='result'))
         return sm
 
 
-app = test_of_rufie()
+app = HeartCheck()
 app.run()
